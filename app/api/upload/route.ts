@@ -3,9 +3,9 @@ import axios from 'axios';
 import fs from 'fs';
 import path from 'path';
 
-// Configuration for your local IPFS node
-const IPFS_API_URL = 'http://127.0.0.1:5001/api/v0';
-const ETHERITH_GATEWAY = 'http://127.0.0.1:8080'; // Your local gateway
+// Configuration for your Tailscale IPFS node
+const IPFS_API_URL = 'http://100.75.134.128:5001/api/v0';
+const ETHERITH_GATEWAY = 'http://100.75.134.128:8080'; // Your Tailscale gateway
 
 // Simple file-based storage for MVP (replace with database later)
 const FILES_DB_PATH = path.join(process.cwd(), 'data', 'files.json');
