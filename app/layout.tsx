@@ -1,5 +1,17 @@
 import './globals.css';
 import { ReactNode } from 'react';
+import { Inter, Merriweather } from 'next/font/google';
+
+const inter = Inter({
+  subsets: ['latin'],
+  variable: '--font-inter',
+});
+
+const merriweather = Merriweather({
+  subsets: ['latin'],
+  weight: ['300', '400', '700'],
+  variable: '--font-merriweather',
+});
 
 export const metadata = {
   title: 'Etherith - Living Archive',
@@ -14,15 +26,12 @@ export const metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${inter.variable} ${merriweather.variable}`}>
       <head>
         <link rel="icon" type="image/jpeg" href="/etherith_logo_v2.jpg" />
         <link rel="shortcut icon" type="image/jpeg" href="/etherith_logo_v2.jpg" />
         <link rel="apple-touch-icon" href="/etherith_logo_v2.jpg" />
         <meta name="theme-color" content="#d97706" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&family=Merriweather:wght@700&display=swap" rel="stylesheet" />
       </head>
       <body>
         {children}

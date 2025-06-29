@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 
 interface UploadedFile {
   id: string;
@@ -23,12 +24,7 @@ export default function Home() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const [searchTerm, setSearchTerm] = useState('');
 
-  // Load files on component mount
-  useEffect(() => {
-    fetchFiles();
-  }, []);
-
-  const fetchFiles = async () => {
+  const fetchFiles = useCallback(async () => {
     try {
       const response = await fetch('/api/files');
       const data = await response.json();
@@ -48,7 +44,12 @@ export default function Home() {
     } catch (error) {
       console.error('Error fetching files:', error);
     }
-  };
+  }, []);
+
+  // Load files on component mount
+  useEffect(() => {
+    fetchFiles();
+  }, [fetchFiles]);
 
   const getFileType = (filename: string): 'document' | 'image' | 'audio' | 'other' => {
     const ext = filename.split('.').pop()?.toLowerCase();
@@ -197,9 +198,11 @@ export default function Home() {
               <div className="flex items-center space-x-6">
                 <div className="relative">
                   <div className="w-16 h-16 bg-gradient-to-br from-stone-100 to-stone-200 rounded-xl flex items-center justify-center shadow-sm border border-stone-300">
-                    <img 
+                    <Image 
                       src="/etherith_logo_v2.jpg" 
                       alt="Etherith" 
+                      width={64}
+                      height={64}
                       className="w-full h-full object-contain p-2"
                     />
                   </div>
@@ -470,7 +473,7 @@ export default function Home() {
               <div>
                 <h4 className="font-medium text-stone-900 mb-3">Preservation</h4>
                 <p className="text-sm text-stone-600 leading-relaxed">
-                  Every contribution becomes part of humanity's permanent digital heritage,
+                  Every contribution becomes part of humanity&apos;s permanent digital heritage,
                   stored across the decentralized web.
                 </p>
               </div>
