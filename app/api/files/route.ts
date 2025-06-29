@@ -45,8 +45,9 @@ export async function GET(req: NextRequest) {
       id: file.id,
       filename: file.filename,
       cid: file.cid,
-      uploadedAt: new Date(file.uploadedAt),
-      size: file.sizeFormatted,
+      uploadedAt: file.uploadedAt,
+      size: file.size.toString(),
+      sizeFormatted: file.sizeFormatted,
     }));
 
     return NextResponse.json({

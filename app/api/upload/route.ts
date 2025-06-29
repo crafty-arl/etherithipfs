@@ -112,7 +112,8 @@ export async function POST(req: NextRequest) {
       success: true,
       cid: cid,
       filename: file.name,
-      size: fileRecord.sizeFormatted,
+      size: fileRecord.size.toString(),
+      sizeFormatted: fileRecord.sizeFormatted,
       gatewayUrl: `${ETHERITH_GATEWAY}/ipfs/${cid}`,
       publicGatewayUrl: `https://gateway.etherith.io/ipfs/${cid}`, // For display purposes
       uploadedAt: fileRecord.uploadedAt,
