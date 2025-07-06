@@ -24,26 +24,35 @@ export default function DiscordAuthPopup({ isOpen, onClose, onSuccess }: Discord
   const [user, setUser] = useState<DiscordUser | null>(null);
   const [isJoiningServer, setIsJoiningServer] = useState(false);
 
+  console.log('🔵 DiscordAuthPopup rendered with isOpen:', isOpen);
+
   // Handle Discord OAuth flow
   const handleDiscordAuth = async () => {
+    console.log('🔵 Starting Discord authentication flow...');
     setIsAuthenticating(true);
     setError(null);
 
     try {
       // Get Discord OAuth URL from our API
+      console.log('🔵 Fetching Discord OAuth URL...');
       const response = await fetch('/api/auth/discord/url');
       
+      console.log('🔵 OAuth URL response status:', response.status);
+      
       if (!response.ok) {
+        console.error('❌ Failed to fetch OAuth URL:', response.status, response.statusText);
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
       
       const data = await response.json();
-      console.log('Discord OAuth URL response:', data);
+      console.log('🔵 Discord OAuth URL response:', data);
 
       if (!data.success) {
+        console.error('❌ OAuth URL generation failed:', data.error);
         throw new Error(data.error || 'Failed to get Discord auth URL');
       }
 
+      console.log('🔵 Opening Discord OAuth popup...');
       // Open Discord OAuth in a popup window
       const popup = window.open(
         data.authUrl,
@@ -52,48 +61,57 @@ export default function DiscordAuthPopup({ isOpen, onClose, onSuccess }: Discord
       );
 
       if (!popup) {
+        console.error('❌ Popup was blocked');
         throw new Error('Popup blocked. Please allow popups for this site.');
       }
+
+      console.log('🔵 Popup opened successfully, waiting for authentication...');
 
       // Track if we received a message from the popup
       let messageReceived = false;
 
       // Listen for messages from the popup
       const handleMessage = async (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
+        if (event.origin !== window.location.origin) {
+          console.log('⚠️ Ignoring message from different origin:', event.origin);
+          return;
+        }
 
-        console.log('Received message from popup:', event.data);
+        console.log('🔵 Received message from popup:', event.data);
         messageReceived = true;
 
         try {
           if (event.data.type === 'DISCORD_AUTH_SUCCESS') {
+            console.log('✅ Discord auth success received');
             popup.close();
-            console.log('Discord auth success, fetching user data...');
+            console.log('🔵 Fetching user data...');
             
             // Fetch user data from our API
             const userResponse = await fetch('/api/auth/discord/user', {
               credentials: 'include'
             });
             
+            console.log('🔵 User data response status:', userResponse.status);
             const userData = await userResponse.json();
-            console.log('User data response:', userData);
+            console.log('🔵 User data response:', userData);
             
             if (userData.success) {
+              console.log('✅ User authentication successful:', userData.user);
               setUser(userData.user);
               onSuccess?.(userData.user);
-              console.log('User set successfully:', userData.user);
             } else {
+              console.error('❌ Failed to get user data:', userData.error);
               throw new Error(userData.error || 'Failed to get user data');
             }
           } else if (event.data.type === 'DISCORD_AUTH_ERROR') {
+            console.error('❌ Discord OAuth Error:', event.data);
             popup.close();
-            console.error('Discord OAuth Error Details:', event.data);
             const errorMessage = event.data.error || event.data.message || 'Authentication failed';
             throw new Error(`Discord Authentication Error: ${errorMessage}`);
           }
         } catch (messageError) {
+          console.error('❌ Message handling error:', messageError);
           popup.close();
-          console.error('Message handling error:', messageError);
           setError(messageError instanceof Error ? messageError.message : 'Authentication failed');
           setIsAuthenticating(false);
         }
@@ -102,6 +120,7 @@ export default function DiscordAuthPopup({ isOpen, onClose, onSuccess }: Discord
       // Timeout fallback - close popup after 5 minutes
       const timeoutId = setTimeout(() => {
         if (!popup.closed) {
+          console.log('⏰ Authentication timeout reached');
           popup.close();
           clearInterval(checkClosed);
           window.removeEventListener('message', handleMessageWithCleanup);
@@ -122,7 +141,7 @@ export default function DiscordAuthPopup({ isOpen, onClose, onSuccess }: Discord
       // Check if popup was closed manually (with a small delay to avoid race conditions)
       const checkClosed = setInterval(() => {
         if (popup.closed) {
-          console.log('Popup closed detected. Message received:', messageReceived, 'User:', !!user);
+          console.log('🔵 Popup closed detected. Message received:', messageReceived, 'User:', !!user);
           clearInterval(checkClosed);
           clearTimeout(timeoutId);
           window.removeEventListener('message', handleMessageWithCleanup);
@@ -130,14 +149,14 @@ export default function DiscordAuthPopup({ isOpen, onClose, onSuccess }: Discord
           
           // Only show cancellation error if we didn't receive a message and have no user
           if (!messageReceived && !user) {
-            console.log('Setting cancellation error - no message received and no user');
+            console.log('⚠️ Setting cancellation error - no message received and no user');
             setError('Authentication was cancelled or the popup was closed');
           }
         }
       }, 1000);
 
     } catch (error) {
-      console.error('Discord auth error:', error);
+      console.error('❌ Discord auth error:', error);
       setError(error instanceof Error ? error.message : 'Authentication failed');
     } finally {
       setIsAuthenticating(false);
