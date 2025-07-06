@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
+import Image from 'next/image';
 
 interface DiscordUser {
   id: string;
@@ -309,9 +310,11 @@ export default function DiscordAuthPopup({ isOpen, onClose, onSuccess }: Discord
               <div className="mb-6">
                 <div className="w-16 h-16 mx-auto mb-4 rounded-full overflow-hidden border-2 border-green-200">
                   {user.avatar ? (
-                    <img 
+                    <Image 
                       src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`} 
                       alt={user.username}
+                      width={64}
+                      height={64}
                       className="w-full h-full object-cover"
                     />
                   ) : (
@@ -326,7 +329,7 @@ export default function DiscordAuthPopup({ isOpen, onClose, onSuccess }: Discord
                   Welcome, {user.username}!
                 </h3>
                 <p className="text-gray-600 text-sm mb-4">
-                  You're successfully authenticated. Ready to join our Discord community?
+                  You&apos;re successfully authenticated. Ready to join our Discord community?
                 </p>
               </div>
 
