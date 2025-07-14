@@ -1,0 +1,148 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import AuthLoadingPopup from '../components/AuthLoadingPopup';
+import MemoryDisplay from '../components/MemoryDisplay';
+
+interface DiscordUser {
+  id: string;
+  username: string;
+  discriminator: string;
+  avatar: string;
+  email?: string;
+}
+
+export default function DemoPage() {
+  const [user, setUser] = useState<DiscordUser | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [guildId, setGuildId] = useState<string | undefined>(undefined);
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const response = await fetch('/api/auth/discord/user', {
+          credentials: 'include'
+        });
+        
+        if (response.ok) {
+          const userData = await response.json();
+          if (userData.success) {
+            setUser(userData.user);
+            
+            // Try to get guild ID from the user data or session
+            if (userData.guildId) {
+              setGuildId(userData.guildId);
+            }
+          } else {
+            // Not authenticated, redirect to main page
+            router.push('/');
+          }
+        } else {
+          // Not authenticated, redirect to main page
+          router.push('/');
+        }
+      } catch (error) {
+        console.error('Auth check error:', error);
+        router.push('/');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
+  }, [router]);
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/discord/logout', { 
+        method: 'POST',
+        credentials: 'include'
+      });
+      router.push('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      router.push('/');
+    }
+  };
+
+  if (!user) {
+    return <AuthLoadingPopup isOpen={loading} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-amber-50">
+      {/* Subtle Afrofuturism-inspired background */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute top-0 left-0 w-full h-full opacity-[0.03]">
+          <div className="absolute top-1/4 left-1/6 w-[400px] h-[400px] sm:w-[800px] sm:h-[800px] bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 rounded-full blur-3xl animate-pulse"></div>
+          <div className="absolute bottom-1/4 right-1/6 w-[300px] h-[300px] sm:w-[600px] sm:h-[600px] bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 rounded-full blur-3xl animate-pulse delay-1000"></div>
+        </div>
+      </div>
+
+      <div className="relative z-10">
+        {/* Demo Version Header */}
+        <header className="border-b border-stone-200 bg-white/80 backdrop-blur-sm">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
+            <div className="flex flex-col sm:flex-row items-center justify-between space-y-4 sm:space-y-0">
+              <div className="flex items-center space-x-3 sm:space-x-6">
+                <div className="relative">
+                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-stone-100 to-stone-200 rounded-xl flex items-center justify-center shadow-sm border border-stone-300">
+                    <svg className="w-8 h-8 sm:w-10 sm:h-10 text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </div>
+                  <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full border-2 border-white"></div>
+                </div>
+                <div className="text-center sm:text-left">
+                  <h1 className="text-2xl sm:text-4xl font-light text-stone-900 tracking-wide font-serif">
+                    ETHERITH
+                  </h1>
+                  <p className="text-stone-600 text-xs sm:text-sm font-light tracking-wider uppercase">
+                    Demo Version
+                  </p>
+                </div>
+              </div>
+              
+              <div className="flex items-center space-x-3 sm:space-x-4">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-stone-300 flex-shrink-0">
+                    <img 
+                      src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`}
+                      alt={`${user.username}'s avatar`}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="text-center sm:text-right">
+                    <p className="text-stone-900 font-medium text-sm sm:text-base">{user.username}</p>
+                    <p className="text-xs text-stone-500">Connected</p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="text-stone-600 hover:text-stone-900 transition-colors min-h-[44px] min-w-[44px] flex items-center justify-center"
+                  aria-label="Logout"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        {/* Memory Display SPA */}
+        <MemoryDisplay 
+          user={{
+            id: user.id,
+            username: user.username,
+            avatar: user.avatar
+          }}
+          guildId={guildId}
+        />
+      </div>
+    </div>
+  );
+} 
