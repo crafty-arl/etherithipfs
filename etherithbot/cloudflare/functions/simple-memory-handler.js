@@ -45,6 +45,7 @@ export default {
           userId: searchData.userId,
           filters: searchData.filters
         });
+        console.log('🚨 UPDATED WORKER CODE IS RUNNING - WITH IPFS JOIN LOGIC!');
 
         if (!env.MEMORY_DB) {
           return new Response(JSON.stringify({
@@ -73,37 +74,60 @@ export default {
             result = await searchMemories(searchData.userId, searchData.filters || {}, env);
           } else if (searchData.type === 'members_only') {
             // Search memories with members_only privacy level - Our Memories tab
-            // This implements the exact query: SELECT * FROM memories WHERE privacy_level = 'members_only'
+            // Now using the same JOIN logic as other functions to include IPFS data
             try {
-              let query = 'SELECT * FROM memories WHERE privacy_level = ?';
+              // TEST: Simple query first to see if data exists
+              const testQuery = await env.MEMORY_DB.prepare(`
+                SELECT COUNT(*) as total_files, 
+                       COUNT(CASE WHEN ipfs_cid IS NOT NULL THEN 1 END) as files_with_ipfs
+                FROM memory_files
+              `).first();
+              console.log('🧪 TEST memory_files table (members_only):', testQuery);
+
+              let query = `
+                SELECT m.*, 
+                       mf.ipfs_cid, 
+                       mf.ipfs_url, 
+                       mf.storage_key, 
+                       mf.filename, 
+                       mf.file_type, 
+                       mf.file_size, 
+                       mf.storage_url
+                FROM memories m
+                LEFT JOIN (
+                  SELECT memory_id, ipfs_cid, ipfs_url, storage_key, filename, file_type, file_size, storage_url,
+                         ROW_NUMBER() OVER (PARTITION BY memory_id ORDER BY uploaded_at ASC) as rn
+                  FROM memory_files
+                ) mf ON m.id = mf.memory_id AND mf.rn = 1
+                WHERE m.privacy_level = ?`;
               let bindings = ['members_only'];
 
               // Add additional filters if provided
               const filters = searchData.filters || {};
               
               if (filters.category) {
-                query += ' AND category = ?';
+                query += ' AND m.category = ?';
                 bindings.push(filters.category);
               }
 
               if (filters.searchTerm) {
-                query += ' AND (title LIKE ? OR description LIKE ? OR tags LIKE ?)';
+                query += ' AND (m.title LIKE ? OR m.description LIKE ? OR m.tags LIKE ?)';
                 const searchPattern = `%${filters.searchTerm}%`;
                 bindings.push(searchPattern, searchPattern, searchPattern);
               }
 
               if (filters.dateFrom) {
-                query += ' AND created_at >= ?';
+                query += ' AND m.created_at >= ?';
                 bindings.push(filters.dateFrom);
               }
 
               if (filters.dateTo) {
-                query += ' AND created_at <= ?';
+                query += ' AND m.created_at <= ?';
                 bindings.push(filters.dateTo);
               }
 
               // Add ordering and pagination
-              query += ' ORDER BY created_at DESC';
+              query += ' ORDER BY m.created_at DESC';
               
               if (filters.limit) {
                 query += ' LIMIT ?';
@@ -115,16 +139,51 @@ export default {
                 bindings.push(filters.offset);
               }
 
-              console.log('🔍 Our Memories Query:', { query, bindings });
+              console.log('🔍 Our Memories Query with JOIN:', { query, bindings });
               const dbResult = await env.MEMORY_DB.prepare(query).bind(...bindings).all();
 
-              // Parse JSON fields for each memory
-              const memories = dbResult.results.map(memory => ({
-                ...memory,
-                tags: JSON.parse(memory.tags || '[]'),
-                shareOptions: JSON.parse(memory.share_options || '[]'),
-                uploadConfig: JSON.parse(memory.upload_config || '{}')
-              }));
+              // DEBUG: Log the raw database result
+              console.log('🔍 DEBUG members_only - Raw DB result:', {
+                resultCount: dbResult.results.length,
+                sampleResult: dbResult.results[0] ? {
+                  id: dbResult.results[0].id,
+                  title: dbResult.results[0].title,
+                  ipfs_cid: dbResult.results[0].ipfs_cid,
+                  ipfs_url: dbResult.results[0].ipfs_url,
+                  storage_url: dbResult.results[0].storage_url,
+                  filename: dbResult.results[0].filename,
+                  allKeys: Object.keys(dbResult.results[0])
+                } : 'No results'
+              });
+
+              // Parse JSON fields for each memory and include file data
+              const memories = dbResult.results.map(memory => {
+                const transformed = {
+                  ...memory,
+                  tags: JSON.parse(memory.tags || '[]'),
+                  shareOptions: JSON.parse(memory.share_options || '[]'),
+                  uploadConfig: JSON.parse(memory.upload_config || '{}'),
+                  // Include file data from the JOIN
+                  file_url: memory.storage_url,
+                  file_name: memory.filename,
+                  file_size: memory.file_size,
+                  content_type: memory.file_type
+                };
+                
+                // DEBUG: Log first transformed memory
+                if (memory.id === dbResult.results[0]?.id) {
+                  console.log('🔄 DEBUG members_only - Transformed memory:', {
+                    id: transformed.id,
+                    title: transformed.title,
+                    ipfs_cid: transformed.ipfs_cid,
+                    ipfs_url: transformed.ipfs_url,
+                    file_url: transformed.file_url,
+                    storage_key: transformed.storage_key
+                  });
+                }
+                
+                return transformed;
+              });
 
               result = {
                 success: true,

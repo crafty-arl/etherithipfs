@@ -147,7 +147,20 @@ export function getPrivacyDisplayName(privacy: string): string {
 
 // Helper function to format date
 export function formatDate(dateString: string): string {
+  // Handle null, undefined, or empty date strings
+  if (!dateString || typeof dateString !== 'string') {
+    console.warn('❌ Invalid date input:', dateString);
+    return 'Unknown date';
+  }
+
   const date = new Date(dateString);
+  
+  // Check if the date is invalid
+  if (isNaN(date.getTime())) {
+    console.warn('❌ Invalid date string:', dateString);
+    return 'Unknown date';
+  }
+
   const now = new Date();
   const diffInHours = (now.getTime() - date.getTime()) / (1000 * 60 * 60);
 
@@ -160,10 +173,16 @@ export function formatDate(dateString: string): string {
     const days = Math.floor(diffInHours / 24);
     return `${days} day${days > 1 ? 's' : ''} ago`;
   } else {
-    return date.toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'short',
-      day: 'numeric',
-    });
+    try {
+      const formatted = date.toLocaleDateString('en-US', {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric',
+      });
+      return formatted;
+    } catch (error) {
+      console.warn('❌ Error formatting date:', dateString, error);
+      return 'Unknown date';
+    }
   }
 } 

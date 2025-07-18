@@ -303,38 +303,71 @@ export async function getMemoryById(memoryId, env) {
  */
 export async function searchMemories(userId, filters = {}, env) {
   try {
-    let query = 'SELECT * FROM memories WHERE user_id = ?';
+    // TEST: Simple query first to see if data exists
+    const testQuery = await env.MEMORY_DB.prepare(`
+      SELECT COUNT(*) as total_files, 
+             COUNT(CASE WHEN ipfs_cid IS NOT NULL THEN 1 END) as files_with_ipfs
+      FROM memory_files
+    `).first();
+    console.log('🧪 TEST memory_files table:', testQuery);
+    
+    // TEST: Check if JOIN is working
+    const joinTest = await env.MEMORY_DB.prepare(`
+      SELECT m.id, m.title, mf.ipfs_cid, mf.memory_id
+      FROM memories m
+      LEFT JOIN memory_files mf ON m.id = mf.memory_id
+      WHERE m.user_id = ?
+      LIMIT 1
+    `).bind(userId).first();
+    console.log('🧪 TEST JOIN result:', joinTest);
+
+    let query = `
+      SELECT m.*, 
+             mf.ipfs_cid, 
+             mf.ipfs_url, 
+             mf.storage_key, 
+             mf.filename, 
+             mf.file_type, 
+             mf.file_size, 
+             mf.storage_url
+      FROM memories m
+      LEFT JOIN (
+        SELECT memory_id, ipfs_cid, ipfs_url, storage_key, filename, file_type, file_size, storage_url,
+               ROW_NUMBER() OVER (PARTITION BY memory_id ORDER BY uploaded_at ASC) as rn
+        FROM memory_files
+      ) mf ON m.id = mf.memory_id AND mf.rn = 1
+      WHERE m.user_id = ?`;
     let bindings = [userId];
 
     // Add filters
     if (filters.category) {
-      query += ' AND category = ?';
+      query += ' AND m.category = ?';
       bindings.push(filters.category);
     }
 
     if (filters.privacy) {
-      query += ' AND privacy_level = ?';
+      query += ' AND m.privacy_level = ?';
       bindings.push(filters.privacy);
     }
 
     if (filters.searchTerm) {
-      query += ' AND (title LIKE ? OR description LIKE ? OR tags LIKE ?)';
+      query += ' AND (m.title LIKE ? OR m.description LIKE ? OR m.tags LIKE ?)';
       const searchPattern = `%${filters.searchTerm}%`;
       bindings.push(searchPattern, searchPattern, searchPattern);
     }
 
     if (filters.dateFrom) {
-      query += ' AND created_at >= ?';
+      query += ' AND m.created_at >= ?';
       bindings.push(filters.dateFrom);
     }
 
     if (filters.dateTo) {
-      query += ' AND created_at <= ?';
+      query += ' AND m.created_at <= ?';
       bindings.push(filters.dateTo);
     }
 
     // Add ordering and pagination
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY m.created_at DESC';
     
     if (filters.limit) {
       query += ' LIMIT ?';
@@ -348,13 +381,48 @@ export async function searchMemories(userId, filters = {}, env) {
 
     const result = await env.MEMORY_DB.prepare(query).bind(...bindings).all();
 
-    // Parse JSON fields for each memory
-    const memories = result.results.map(memory => ({
-      ...memory,
-      tags: JSON.parse(memory.tags || '[]'),
-      shareOptions: JSON.parse(memory.share_options || '[]'),
-      uploadConfig: JSON.parse(memory.upload_config || '{}')
-    }));
+    // DEBUG: Log the raw database result
+    console.log('🔍 DEBUG searchMemories - Raw DB result:', {
+      resultCount: result.results.length,
+      sampleResult: result.results[0] ? {
+        id: result.results[0].id,
+        title: result.results[0].title,
+        ipfs_cid: result.results[0].ipfs_cid,
+        ipfs_url: result.results[0].ipfs_url,
+        storage_url: result.results[0].storage_url,
+        filename: result.results[0].filename,
+        allKeys: Object.keys(result.results[0])
+      } : 'No results'
+    });
+
+    // Parse JSON fields for each memory and include file data
+    const memories = result.results.map(memory => {
+      const transformed = {
+        ...memory,
+        tags: JSON.parse(memory.tags || '[]'),
+        shareOptions: JSON.parse(memory.share_options || '[]'),
+        uploadConfig: JSON.parse(memory.upload_config || '{}'),
+        // Include file data from the JOIN
+        file_url: memory.storage_url,
+        file_name: memory.filename,
+        file_size: memory.file_size,
+        content_type: memory.file_type
+      };
+      
+      // DEBUG: Log transformed memory
+      if (memory.id === result.results[0]?.id) {
+        console.log('🔄 DEBUG searchMemories - Transformed memory:', {
+          id: transformed.id,
+          title: transformed.title,
+          ipfs_cid: transformed.ipfs_cid,
+          ipfs_url: transformed.ipfs_url,
+          file_url: transformed.file_url,
+          storage_key: transformed.storage_key
+        });
+      }
+      
+      return transformed;
+    });
 
     return {
       success: true,
@@ -382,24 +450,55 @@ export async function searchMemories(userId, filters = {}, env) {
  */
 export async function getServerMemories(guildId, requesterId, filters = {}, env) {
   try {
+    // TEST: Simple query first to see if data exists
+    const testQuery = await env.MEMORY_DB.prepare(`
+      SELECT COUNT(*) as total_files, 
+             COUNT(CASE WHEN ipfs_cid IS NOT NULL THEN 1 END) as files_with_ipfs
+      FROM memory_files
+    `).first();
+    console.log('🧪 TEST memory_files table (server):', testQuery);
+    
+    // TEST: Check if JOIN is working
+    const joinTest = await env.MEMORY_DB.prepare(`
+      SELECT m.id, m.title, mf.ipfs_cid, mf.memory_id
+      FROM memories m
+      LEFT JOIN memory_files mf ON m.id = mf.memory_id
+      WHERE m.server_id = ?
+      LIMIT 1
+    `).bind(guildId).first();
+    console.log('🧪 TEST JOIN result (server):', joinTest);
+
     let query = `
-      SELECT * FROM memories 
-      WHERE server_id = ? 
+      SELECT m.*, 
+             mf.ipfs_cid, 
+             mf.ipfs_url, 
+             mf.storage_key, 
+             mf.filename, 
+             mf.file_type, 
+             mf.file_size, 
+             mf.storage_url
+      FROM memories m
+      LEFT JOIN (
+        SELECT memory_id, ipfs_cid, ipfs_url, storage_key, filename, file_type, file_size, storage_url,
+               ROW_NUMBER() OVER (PARTITION BY memory_id ORDER BY uploaded_at ASC) as rn
+        FROM memory_files
+      ) mf ON m.id = mf.memory_id AND mf.rn = 1
+      WHERE m.server_id = ? 
       AND (
-        privacy_level = 'Public' 
-        OR (privacy_level = 'Members Only' AND ? IS NOT NULL)
-        OR (privacy_level = 'Private' AND user_id = ?)
+        m.privacy_level = 'Public' 
+        OR (m.privacy_level = 'Members Only' AND ? IS NOT NULL)
+        OR (m.privacy_level = 'Private' AND m.user_id = ?)
       )
     `;
     let bindings = [guildId, requesterId, requesterId];
 
     // Add additional filters (similar to searchMemories)
     if (filters.category) {
-      query += ' AND category = ?';
+      query += ' AND m.category = ?';
       bindings.push(filters.category);
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY m.created_at DESC';
 
     if (filters.limit) {
       query += ' LIMIT ?';
@@ -408,12 +507,47 @@ export async function getServerMemories(guildId, requesterId, filters = {}, env)
 
     const result = await env.MEMORY_DB.prepare(query).bind(...bindings).all();
 
-    const memories = result.results.map(memory => ({
-      ...memory,
-      tags: JSON.parse(memory.tags || '[]'),
-      shareOptions: JSON.parse(memory.share_options || '[]'),
-      uploadConfig: JSON.parse(memory.upload_config || '{}')
-    }));
+    // DEBUG: Log the raw database result for server memories
+    console.log('🔍 DEBUG getServerMemories - Raw DB result:', {
+      resultCount: result.results.length,
+      sampleResult: result.results[0] ? {
+        id: result.results[0].id,
+        title: result.results[0].title,
+        ipfs_cid: result.results[0].ipfs_cid,
+        ipfs_url: result.results[0].ipfs_url,
+        storage_url: result.results[0].storage_url,
+        filename: result.results[0].filename,
+        allKeys: Object.keys(result.results[0])
+      } : 'No results'
+    });
+
+    const memories = result.results.map(memory => {
+      const transformed = {
+        ...memory,
+        tags: JSON.parse(memory.tags || '[]'),
+        shareOptions: JSON.parse(memory.share_options || '[]'),
+        uploadConfig: JSON.parse(memory.upload_config || '{}'),
+        // Include file data from the JOIN
+        file_url: memory.storage_url,
+        file_name: memory.filename,
+        file_size: memory.file_size,
+        content_type: memory.file_type
+      };
+      
+      // DEBUG: Log transformed memory
+      if (memory.id === result.results[0]?.id) {
+        console.log('🔄 DEBUG getServerMemories - Transformed memory:', {
+          id: transformed.id,
+          title: transformed.title,
+          ipfs_cid: transformed.ipfs_cid,
+          ipfs_url: transformed.ipfs_url,
+          file_url: transformed.file_url,
+          storage_key: transformed.storage_key
+        });
+      }
+      
+      return transformed;
+    });
 
     return {
       success: true,

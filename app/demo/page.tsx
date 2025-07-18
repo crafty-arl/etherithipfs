@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
-import AuthLoadingPopup from '../components/AuthLoadingPopup';
 import MemoryDisplay from '../components/MemoryDisplay';
 
 interface DiscordUser {
@@ -69,7 +68,39 @@ export default function DemoPage() {
   };
 
   if (!user) {
-    return <AuthLoadingPopup isOpen={loading} />;
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-stone-50 via-white to-amber-50 flex items-center justify-center">
+        {/* Subtle Afrofuturism-inspired background */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <div className="absolute top-0 left-0 w-full h-full opacity-[0.03]">
+            <div className="absolute top-1/4 left-1/6 w-[400px] h-[400px] sm:w-[800px] sm:h-[800px] bg-gradient-to-r from-amber-600 via-orange-500 to-red-500 rounded-full blur-3xl animate-pulse"></div>
+            <div className="absolute bottom-1/4 right-1/6 w-[300px] h-[300px] sm:w-[600px] sm:h-[600px] bg-gradient-to-r from-purple-600 via-pink-500 to-orange-500 rounded-full blur-3xl animate-pulse delay-1000"></div>
+          </div>
+        </div>
+
+        <div className="relative z-10 text-center">
+          {loading ? (
+            <>
+              <div className="w-20 h-20 mx-auto mb-8">
+                <div className="w-full h-full border-4 border-amber-200 border-t-amber-600 rounded-full animate-spin"></div>
+              </div>
+              <h2 className="text-2xl font-light text-stone-900 mb-3 font-serif">ETHERITH</h2>
+              <p className="text-stone-600 text-sm tracking-wider uppercase">Initializing Memory Weaver</p>
+            </>
+          ) : (
+            <>
+              <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 18.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <h2 className="text-xl font-light text-stone-900 mb-2">Authentication Required</h2>
+              <p className="text-stone-600 text-sm">Redirecting to login...</p>
+            </>
+          )}
+        </div>
+      </div>
+    );
   }
 
   return (

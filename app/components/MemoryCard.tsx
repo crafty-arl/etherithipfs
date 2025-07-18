@@ -11,9 +11,10 @@ interface MemoryCardProps {
   onDelete?: (memoryId: string) => void;
   isOwner?: boolean;
   viewMode?: 'our' | 'my';
+  username?: string;
 }
 
-export default function MemoryCard({ memory, onView, onDelete, isOwner = false, viewMode = 'our' }: MemoryCardProps) {
+export default function MemoryCard({ memory, onView, onDelete, isOwner = false, viewMode = 'our', username }: MemoryCardProps) {
   const [isHovered, setIsHovered] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -67,14 +68,35 @@ export default function MemoryCard({ memory, onView, onDelete, isOwner = false, 
     >
       {/* File Preview Area */}
       <div className="relative bg-stone-50 overflow-hidden">
-        {memory.fileUrl && memory.contentType?.startsWith('image/') ? (
+        {(memory.ipfsCid || memory.fileUrl) && memory.contentType?.startsWith('image/') ? (
           <div className="aspect-[4/3] relative">
-          <OptimizedImage
-            src={memory.fileUrl}
-            alt={memory.title}
-            fill
-              className="object-cover transition-transform duration-500 group-hover:scale-105"
-          />
+            {memory.ipfsCid ? (
+              // Use regular img tag for IPFS to avoid Next.js optimization timeouts
+              <img
+                src={`https://gateway.pinata.cloud/ipfs/${memory.ipfsCid}`}
+                alt={memory.title}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+                onError={(e) => {
+                  // Fallback to different IPFS gateways
+                  const target = e.target as HTMLImageElement;
+                  if (target.src.includes('gateway.pinata.cloud')) {
+                    target.src = `https://cloudflare-ipfs.com/ipfs/${memory.ipfsCid}`;
+                  } else if (target.src.includes('cloudflare-ipfs.com')) {
+                    target.src = `https://dweb.link/ipfs/${memory.ipfsCid}`;
+                  } else if (target.src.includes('dweb.link') && memory.fileUrl) {
+                    // Final fallback to R2 URL
+                    target.src = memory.fileUrl;
+                  }
+                }}
+              />
+            ) : (
+              <OptimizedImage
+                src={memory.fileUrl || ''}
+                alt={memory.title}
+                fill
+                className="object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+            )}
           </div>
         ) : (
           <div className="aspect-[4/3] flex items-center justify-center">
@@ -145,14 +167,33 @@ export default function MemoryCard({ memory, onView, onDelete, isOwner = false, 
 
         {/* Footer */}
         <div className="flex items-center justify-between text-xs text-stone-400 pt-2 border-t border-stone-50">
-          <span className="font-light fashion-text">{formatDate(memory.createdAt)}</span>
+          <div className="flex flex-col">
+            <span className="font-light fashion-text">{formatDate(memory.createdAt)}</span>
+            {memory.userId && (
+              <span className="text-xs text-stone-500 mt-1">
+                by {username || `User ${memory.userId.slice(-4)}`}
+              </span>
+            )}
+          </div>
           
           <div className="flex items-center space-x-2">
-            {/* IPFS Badge */}
-            {memory.ipfsCid && (
-              <span className="inline-flex items-center px-2 py-1 rounded-full bg-stone-100 text-stone-600 text-xs font-light">
-                🌐 IPFS
-              </span>
+            {/* View Content Link */}
+            {(memory.ipfsCid || memory.fileUrl) && (
+              <a
+                href={
+                  memory.ipfsUrl || 
+                  (memory.ipfsCid ? `https://ipfs.io/ipfs/${memory.ipfsCid}` : memory.fileUrl)
+                }
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center px-2 py-1 rounded-full bg-stone-100 text-stone-600 text-xs font-light hover:bg-stone-200 transition-colors"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <span className="mr-1">
+                  {memory.ipfsCid ? '🌐' : '📎'}
+                </span>
+                View Content
+              </a>
             )}
             
             {/* Delete Button (Owner Only) */}
