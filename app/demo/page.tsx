@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import Image from 'next/image';
 import AuthLoadingPopup from '../components/AuthLoadingPopup';
 import MemoryDisplay from '../components/MemoryDisplay';
 
@@ -89,9 +90,14 @@ export default function DemoPage() {
               <div className="flex items-center space-x-3 sm:space-x-6">
                 <div className="relative">
                   <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-stone-100 to-stone-200 rounded-xl flex items-center justify-center shadow-sm border border-stone-300">
-                    <svg className="w-8 h-8 sm:w-10 sm:h-10 text-stone-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
+                    <Image 
+                      src="/etherith_logo_v2.jpg" 
+                      alt="Etherith Logo" 
+                      width={64}
+                      height={64}
+                      className="w-full h-full object-contain p-2"
+                      priority
+                    />
                   </div>
                   <div className="absolute -bottom-1 -right-1 w-3 h-3 sm:w-4 sm:h-4 bg-gradient-to-r from-amber-400 to-orange-500 rounded-full border-2 border-white"></div>
                 </div>
@@ -108,9 +114,11 @@ export default function DemoPage() {
               <div className="flex items-center space-x-3 sm:space-x-4">
                 <div className="flex items-center space-x-3">
                   <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full overflow-hidden border-2 border-stone-300 flex-shrink-0">
-                    <img 
+                    <Image 
                       src={`https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`}
                       alt={`${user.username}'s avatar`}
+                      width={40}
+                      height={40}
                       className="w-full h-full object-cover"
                     />
                   </div>

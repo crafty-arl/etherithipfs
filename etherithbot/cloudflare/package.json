@@ -1,0 +1,42 @@
+{
+  "name": "memory-weaver-cloudflare",
+  "version": "1.0.0",
+  "description": "Cloudflare Workers for Memory Weaver Discord bot file processing",
+  "main": "functions/upload-handler.js",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "build": "esbuild --bundle --format=esm --target=es2022 --outdir=dist functions/*.js",
+    "test": "vitest",
+    "db:migrate": "wrangler d1 migrations apply memory-weaver-db",
+    "db:create": "wrangler d1 create memory-weaver-db",
+    "kv:create": "wrangler kv:namespace create UPLOAD_SESSIONS",
+    "r2:create": "wrangler r2 bucket create memory-weaver-files"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "r2",
+    "d1",
+    "file-upload",
+    "discord-bot"
+  ],
+  "author": "Ethereum Server Team",
+  "license": "MIT",
+  "dependencies": {
+    "mime": "^3.0.0",
+    "sharp": "^0.32.6",
+    "crypto-js": "^4.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20231121.0",
+    "wrangler": "^3.19.0",
+    "esbuild": "^0.19.8",
+    "vitest": "^1.0.0",
+    "typescript": "^5.3.2"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+} 

@@ -1,0 +1,29 @@
+name = "memory-weaver-simple"
+main = "functions/simple-memory-handler.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# Account configuration
+account_id = "6e794c040a03d9cc6aaa6bcc3462f0cb"
+
+# Environment variables
+[env.development.vars]
+ENVIRONMENT = "development"
+LOG_LEVEL = "debug"
+
+[env.production.vars]
+ENVIRONMENT = "production"
+LOG_LEVEL = "info"
+
+# Routes (will be auto-generated)
+[triggers]
+# No cron jobs initially
+
+# Build configuration
+[build]
+# No build process needed for simple handler
+
+# Limits
+[limits]
+cpu_ms = 30000
+memory_mb = 128 
