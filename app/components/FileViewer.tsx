@@ -50,7 +50,9 @@ export default function FileViewer({
 
   // Initialize file URL
   useEffect(() => {
-    const url = getFileUrl();
+    const url = memory.ipfsUrl || 
+                 (memory.ipfsCid ? `https://gateway.pinata.cloud/ipfs/${memory.ipfsCid}` : null) ||
+                 memory.fileUrl;
     if (url) {
       setCurrentUrl(url);
       setIsLoading(false);

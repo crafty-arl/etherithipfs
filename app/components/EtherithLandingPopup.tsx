@@ -109,7 +109,7 @@ export default function EtherithLandingPopup({
                 Memory Weaver
               </h2>
               <p className="text-stone-600 leading-relaxed text-sm max-w-md mx-auto">
-                Preserve your community's stories and memories on the decentralized web. 
+                Preserve your community&apos;s stories and memories on the decentralized web. 
                 Connect with Discord to start contributing to shared cultural heritage.
               </p>
             </div>

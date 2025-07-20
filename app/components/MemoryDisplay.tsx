@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Memory, MemoryFilters, MemoryStats } from '../types/memory';
 import { memoryApi } from '../utils/memoryApi';
 import AdaptiveMemoryGrid from './AdaptiveMemoryGrid';
@@ -111,7 +111,7 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
   };
 
   // Fetch stats
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     console.log('📊 Fetching memory stats');
     setStatsLoaded(false);
     
@@ -128,10 +128,10 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
     } finally {
       setStatsLoaded(true);
     }
-  };
+  }, []);
 
   // Fetch memories for both view modes
-  const fetchMemories = async (mode: ViewMode) => {
+  const fetchMemories = useCallback(async (mode: ViewMode) => {
     console.log(`📚 Starting to fetch ${mode} memories`);
     setMemoriesLoaded(false);
     setError(null);
@@ -216,7 +216,7 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
     } finally {
       setMemoriesLoaded(true);
     }
-  };
+  }, [user?.id, filters]);
 
   // Initial data load
   useEffect(() => {
@@ -231,7 +231,7 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
     }).catch(error => {
       console.error('❌ Error during initial data load:', error);
     });
-  }, [user?.id, filters, guildId]);
+  }, [user?.id, filters, guildId, fetchMemories, fetchStats, viewMode]);
 
   // Handle memory deletion
   const handleDeleteMemory = async (memoryId: string) => {
