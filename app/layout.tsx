@@ -22,18 +22,32 @@ export const metadata = {
     shortcut: '/etherith_logo_v2.jpg',
     apple: '/etherith_logo_v2.jpg',
   },
+  viewport: {
+    width: 'device-width',
+    initialScale: 1,
+    maximumScale: 5,
+    userScalable: true,
+    viewportFit: 'cover',
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${inter.variable} ${merriweather.variable}`}>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=5, user-scalable=yes, viewport-fit=cover" />
+        <meta name="format-detection" content="telephone=no" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+        <meta name="apple-touch-fullscreen" content="yes" />
         <link rel="icon" type="image/jpeg" href="/etherith_logo_v2.jpg" />
         <link rel="shortcut icon" type="image/jpeg" href="/etherith_logo_v2.jpg" />
         <link rel="apple-touch-icon" href="/etherith_logo_v2.jpg" />
         <meta name="theme-color" content="#d97706" />
+        <meta name="color-scheme" content="light" />
       </head>
-      <body>
+      <body className="touch-manipulation">
         {children}
       </body>
     </html>

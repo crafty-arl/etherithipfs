@@ -3,8 +3,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { Memory, MemoryFilters, MemoryStats } from '../types/memory';
 import { memoryApi } from '../utils/memoryApi';
-import MemoryGrid from './MemoryGrid';
+import AdaptiveMemoryGrid from './AdaptiveMemoryGrid';
 import MemoryDetailModal from './MemoryDetailModal';
+import AnimatedDialMenu from './AnimatedDialMenu';
 
 interface MemoryDisplayProps {
   user: {
@@ -33,6 +34,7 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
   const [allTags, setAllTags] = useState<string[]>([]);
   const [allCategories, setAllCategories] = useState<string[]>([]);
   const [usernames, setUsernames] = useState<Record<string, string>>({});
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   
   // New loading states for complete page loading
   const [memoriesLoaded, setMemoriesLoaded] = useState(false);
@@ -76,53 +78,55 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
     const categorySet = new Set<string>();
     memories.forEach(memory => {
       if (memory.category && typeof memory.category === 'string') {
-        categorySet.add(memory.category.trim());
+        categorySet.add(memory.category.toLowerCase().trim());
       }
     });
     return Array.from(categorySet).sort();
   };
 
-  // Fetch Discord usernames for user IDs
+  // Fetch usernames for all user IDs
   const fetchUsernames = async (userIds: string[]) => {
     console.log('👥 Fetching usernames for user IDs:', userIds);
-    
-    if (userIds.length === 0) {
-      setUsernamesLoaded(true);
-      return;
-    }
+    setUsernamesLoaded(false);
     
     try {
-      const response = await fetch('/api/auth/discord/users', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userIds }),
-        credentials: 'include'
-      });
-      
-      console.log('👥 Username fetch response:', response.status, response.ok);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('👥 Username fetch data:', data);
-        
-        if (data.success) {
-          console.log('✅ Successfully fetched usernames:', data.users);
-          setUsernames(prev => {
-            const updated = { ...prev, ...data.users };
-            console.log('👥 Updated usernames state:', updated);
-            return updated;
-          });
-        } else {
-          console.warn('❌ Username fetch failed:', data.error);
-        }
+      if (userIds.length === 0) {
+        console.log('📝 No user IDs to fetch usernames for');
+        setUsernamesLoaded(true);
+        return;
+      }
+
+      const result = await memoryApi.getUsernames(userIds);
+      if (result.success && result.data) {
+        console.log('📇 Successfully fetched usernames:', result.data);
+        setUsernames(result.data);
       } else {
-        const errorData = await response.text();
-        console.warn('❌ Username fetch HTTP error:', response.status, errorData);
+        console.warn('⚠️ Failed to fetch usernames:', result.error);
       }
     } catch (error) {
-      console.error('❌ Failed to fetch usernames:', error);
+      console.error('❌ Error fetching usernames:', error);
     } finally {
       setUsernamesLoaded(true);
+    }
+  };
+
+  // Fetch stats
+  const fetchStats = async () => {
+    console.log('📊 Fetching memory stats');
+    setStatsLoaded(false);
+    
+    try {
+      const result = await memoryApi.getStats();
+      if (result.success && result.data) {
+        console.log('📊 Successfully fetched stats:', result.data);
+        setStats(result.data);
+      } else {
+        console.warn('⚠️ Failed to fetch stats:', result.error);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching stats:', error);
+    } finally {
+      setStatsLoaded(true);
     }
   };
 
@@ -136,6 +140,12 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
       let result;
       
       if (mode === 'my') {
+        if (!user?.id) {
+          console.warn('⚠️ Cannot fetch my memories: user.id is undefined');
+          setMyMemories([]);
+          setMemoriesLoaded(true);
+          return;
+        }
         result = await memoryApi.getMyMemories(user.id, filters);
       } else {
         result = await memoryApi.getOurMemories(filters);
@@ -175,52 +185,61 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
         
         // Fetch usernames for all user IDs in memories
         const userIds = Array.from(new Set(freshMemories.map(m => m.userId).filter(Boolean)));
-        console.log('🔍 Extracted user IDs from memories:', userIds);
-        
         if (userIds.length > 0) {
-          console.log('👥 Starting username fetch for', userIds.length, 'users');
           await fetchUsernames(userIds);
         } else {
-          console.log('⚠️ No user IDs found in memories');
           setUsernamesLoaded(true);
         }
         
-        setMemoriesLoaded(true);
+        console.log(`✅ Successfully fetched ${freshMemories.length} ${mode} memories`);
       } else {
-        setError(result.error || 'Failed to fetch memories');
-        setMemoriesLoaded(true);
+        console.error(`❌ Failed to fetch ${mode} memories:`, result.error);
+        setError(result.error || `Failed to load ${mode} memories`);
+        
+        if (mode === 'my') {
+          setMyMemories([]);
+        } else {
+          setOurMemories([]);
+        }
         setUsernamesLoaded(true);
       }
-    } catch (err) {
-      setError('Network error occurred');
-      setMemoriesLoaded(true);
-      setUsernamesLoaded(true);
-    }
-  };
-
-  // Fetch statistics
-  const fetchStats = async () => {
-    console.log('📊 Starting to fetch stats');
-    setStatsLoaded(false);
-
-    try {
-      const result = await memoryApi.getMemoryStats(user.id, guildId);
-      if (result.success && result.data) {
-        const freshStats = result.data.stats;
-        setStats(freshStats);
-        console.log('✅ Stats loaded successfully');
+    } catch (error) {
+      console.error(`❌ Error fetching ${mode} memories:`, error);
+      setError(`Error loading ${mode} memories`);
+      
+      if (mode === 'my') {
+        setMyMemories([]);
+      } else {
+        setOurMemories([]);
       }
-    } catch (err) {
-      console.error('Failed to fetch stats:', err);
-      setStats(null);
+      setUsernamesLoaded(true);
     } finally {
-      setStatsLoaded(true);
+      setMemoriesLoaded(true);
     }
   };
+
+  // Initial data load
+  useEffect(() => {
+    console.log('🚀 MemoryDisplay: Starting initial data load');
+    
+    // Start concurrent data fetching
+    Promise.all([
+      fetchMemories(viewMode),
+      fetchStats()
+    ]).then(() => {
+      console.log('🎉 All initial data loading operations completed');
+    }).catch(error => {
+      console.error('❌ Error during initial data load:', error);
+    });
+  }, [user?.id, filters, guildId]);
 
   // Handle memory deletion
   const handleDeleteMemory = async (memoryId: string) => {
     try {
+      if (!user?.id) {
+        console.warn('⚠️ Cannot delete memory: user.id is undefined');
+        return;
+      }
       const result = await memoryApi.deleteMemory(memoryId, user.id);
       if (result.success) {
         const updatedMyMemories = myMemories.filter(m => m.id !== memoryId);
@@ -354,99 +373,55 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
 
   const getCurrentMemories = () => getFilteredMemories();
 
+  // Get appropriate empty message
   const getEmptyMessage = () => {
-    const hasFilters = selectedTags.length > 0 || selectedCategory;
-    
-    if (hasFilters) {
-      const filterParts = [];
-      if (selectedCategory) filterParts.push(`category: ${selectedCategory}`);
-      if (selectedTags.length > 0) filterParts.push(`tags: ${selectedTags.join(', ')}`);
-      return `No memories found with the selected ${filterParts.join(' and ')}`;
+    if (selectedTags.length > 0 || selectedCategory) {
+      return 'No memories match your current filters. Try adjusting your search criteria.';
     }
     
     if (viewMode === 'my') {
-      return "You haven't created any memories yet. Start by uploading your first memory through Discord!";
+      return 'You haven\'t created any memories yet. Use the Discord /remember command to create your first memory!';
     } else {
-      return "No members-only memories found. Memories shared with 'Members Only' privacy will appear here.";
+      return 'No community memories found. Be the first to share a memory with the /remember command in Discord!';
     }
   };
 
-  // Fetch data on mount
-  useEffect(() => {
-    console.log('🚀 Initial data fetch starting');
-    fetchMemories('our'); // Start with "Our Memories"
-    fetchStats();
-  }, [user.id, guildId]);
-
-  // Handle filters change
-  useEffect(() => {
-    if (initialLoadComplete) {
-      if (viewMode === 'my') {
-        fetchMemories('my');
-      } else {
-        fetchMemories('our');
-      }
-    }
-  }, [filters]);
-
-  // Show loading screen until everything is ready
+  // Show loading overlay for the entire component until initial load is complete
   if (!initialLoadComplete) {
     return (
-      <div className="min-h-screen bg-white flex items-center justify-center">
-        {/* Fashion-inspired minimalistic background */}
-        <div className="absolute inset-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-0 w-full h-full opacity-[0.02]">
-            <div className="absolute top-1/4 left-1/6 w-[600px] h-[600px] bg-gradient-to-r from-stone-200 to-stone-300 rounded-full blur-3xl"></div>
-            <div className="absolute bottom-1/4 right-1/6 w-[400px] h-[400px] bg-gradient-to-r from-stone-100 to-stone-200 rounded-full blur-3xl"></div>
-          </div>
-        </div>
-
-        <div className="relative z-10 text-center">
-          <div className="w-16 h-16 mx-auto mb-6">
-            <div className="w-full h-full border-4 border-stone-200 border-t-stone-900 rounded-full animate-spin"></div>
-          </div>
-          <h2 className="text-xl font-light text-stone-900 mb-2">Loading Memory Weaver</h2>
-          <p className="text-stone-500 text-sm">
-            {!memoriesLoaded && 'Fetching memories...'}
-            {memoriesLoaded && !usernamesLoaded && 'Loading usernames...'}
-            {memoriesLoaded && usernamesLoaded && !statsLoaded && 'Getting statistics...'}
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-2 border-stone-300 border-t-stone-600 rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-stone-600 font-light">Loading memories...</p>
+          <p className="text-stone-400 text-sm mt-2">
+            {!memoriesLoaded ? 'Fetching memories...' : 
+             !usernamesLoaded ? 'Loading user information...' : 
+             !statsLoaded ? 'Getting statistics...' : 
+             'Almost ready...'}
           </p>
-          
-          {/* Loading progress indicators */}
-          <div className="mt-6 flex justify-center space-x-4 text-xs">
-            <div className={`flex items-center space-x-1 ${memoriesLoaded ? 'text-green-600' : 'text-stone-400'}`}>
-              {memoriesLoaded ? (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                </svg>
-              ) : (
-                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-              )}
-              <span>Memories</span>
-            </div>
-            
-            <div className={`flex items-center space-x-1 ${usernamesLoaded ? 'text-green-600' : 'text-stone-400'}`}>
-              {usernamesLoaded ? (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                </svg>
-              ) : (
-                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-              )}
-              <span>Usernames</span>
-            </div>
-            
-            <div className={`flex items-center space-x-1 ${statsLoaded ? 'text-green-600' : 'text-stone-400'}`}>
-              {statsLoaded ? (
-                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
-                </svg>
-              ) : (
-                <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin"></div>
-              )}
-              <span>Statistics</span>
-            </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="h-screen bg-white flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto px-4">
+          <div className="w-16 h-16 bg-red-50 rounded-full flex items-center justify-center mx-auto mb-4">
+            <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
           </div>
+          <h3 className="text-lg font-medium text-stone-900 mb-2">Unable to Load Memories</h3>
+          <p className="text-stone-600 mb-4">{error}</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-stone-900 text-white rounded-lg hover:bg-stone-800 transition-colors"
+          >
+            Try Again
+          </button>
         </div>
       </div>
     );
@@ -465,10 +440,32 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
       <div className="relative z-10 h-full">
         {/* Main Content Area */}
         <div className="max-w-7xl mx-auto h-full">
-          <div className="flex h-full">
+          <div className="flex h-full relative">
             
-            {/* Left Sidebar - Tags */}
-            <div className="w-80 border-r border-stone-100 bg-stone-50/50 backdrop-blur-sm h-full flex flex-col">
+            {/* Sidebar Toggle Button */}
+            <button
+              onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+              className={`fixed top-1/2 z-30 w-12 h-12 bg-white/90 backdrop-blur-md border border-stone-200/50 rounded-r-xl shadow-lg hover:shadow-xl transition-all duration-300 flex items-center justify-center group ${
+                sidebarCollapsed ? 'left-0' : 'left-80'
+              }`}
+              style={{ transform: 'translateY(-50%)' }}
+            >
+              <svg 
+                className={`w-5 h-5 text-stone-600 group-hover:text-stone-900 transition-transform duration-300 ${
+                  sidebarCollapsed ? 'rotate-0' : 'rotate-180'
+                }`} 
+                fill="none" 
+                stroke="currentColor" 
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+            
+            {/* Left Sidebar - Collapsible */}
+            <div className={`${
+              sidebarCollapsed ? 'w-0 overflow-hidden' : 'w-80'
+            } border-r border-stone-100 bg-stone-50/50 backdrop-blur-sm h-full flex flex-col transition-all duration-300 ease-out`}>
               <div className="p-6 flex flex-col h-full">
                 
                 {/* View Mode Selector */}
@@ -517,81 +514,58 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
                   </div>
                 )}
 
-                                 {/* Category Selector */}
-                 <div className="mb-6">
-                   <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200">
-                     <div className="flex items-center justify-between mb-3">
-                       <h3 className="text-sm font-medium text-stone-900 uppercase tracking-wider">Category</h3>
-                       {selectedCategory && (
-                         <button
-                           onClick={clearCategoryFilter}
-                           className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
-                         >
-                           Clear
-                         </button>
-                       )}
-                     </div>
-                     <select
-                       value={selectedCategory}
-                       onChange={(e) => handleCategoryChange(e.target.value)}
-                       className="w-full px-3 py-2 rounded-lg text-sm bg-white border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
-                     >
-                       <option value="">All Categories</option>
-                       {allCategories.map(category => (
-                         <option key={category} value={category}>{category}</option>
-                       ))}
-                     </select>
-                   </div>
-                 </div>
-
-                {/* Tags Section */}
-                <div className="flex-1 flex flex-col min-h-0">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-sm font-medium text-stone-900 uppercase tracking-wider">Tags</h3>
-                    {selectedTags.length > 0 && (
-                      <button
-                        onClick={clearTagFilters}
-                        className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
-                      >
-                        Clear All
-                      </button>
-                    )}
-                  </div>
-                  
-                  {/* All Tags List */}
-                  <div className="overflow-y-auto flex-1 pr-2 min-h-0">
-                    <div className="space-y-1">
-                      {allTags.map(tag => (
+                {/* Category Selector */}
+                <div className="mb-6">
+                  <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="text-sm font-medium text-stone-900 uppercase tracking-wider">Category</h3>
+                      {selectedCategory && (
                         <button
-                          key={tag}
-                          onClick={() => handleTagSelect(tag)}
-                          className={`w-full text-left px-3 py-2 rounded-lg text-sm transition-all duration-200 flex items-center justify-between ${
-                            selectedTags.includes(tag)
-                              ? 'bg-stone-900 text-white shadow-sm'
-                              : 'text-stone-600 hover:bg-white hover:text-stone-900 hover:shadow-sm'
-                          }`}
+                          onClick={clearCategoryFilter}
+                          className="text-xs text-stone-500 hover:text-stone-700 transition-colors"
                         >
-                          <span>#{tag}</span>
-                          {selectedTags.includes(tag) && (
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                          )}
+                          Clear
                         </button>
-                      ))}
-                      
-                      {allTags.length === 0 && !loading && (
-                        <p className="text-xs text-stone-400 text-center py-8">
-                          No tags available
-                        </p>
                       )}
                     </div>
+                    <select
+                      value={selectedCategory}
+                      onChange={(e) => handleCategoryChange(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg text-sm bg-white border border-stone-200 focus:outline-none focus:ring-2 focus:ring-stone-500 focus:border-transparent"
+                    >
+                      <option value="">All Categories</option>
+                      {allCategories.map(category => (
+                        <option key={category} value={category}>{category}</option>
+                      ))}
+                    </select>
                   </div>
+                </div>
+
+                {/* Tags Selector */}
+                <div className="flex-1 flex flex-col min-h-0">
+                  {allTags.length > 0 ? (
+                    <AnimatedDialMenu
+                      tags={allTags}
+                      selectedTags={selectedTags}
+                      onTagSelect={handleTagSelect}
+                      onClearAll={clearTagFilters}
+                      isCollapsed={sidebarCollapsed}
+                    />
+                  ) : (
+                    <div className="bg-white rounded-xl p-4 shadow-sm border border-stone-200 h-full flex flex-col items-center justify-center">
+                      <div className="w-12 h-12 bg-stone-100 rounded-full flex items-center justify-center mb-3">
+                        <svg className="w-6 h-6 text-stone-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M7 20l4-16m2 16l4-16M6 9h14M4 15h14" />
+                        </svg>
+                      </div>
+                      <p className="text-sm text-stone-500">No tags available</p>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
 
-            {/* Center Content Area */}
+            {/* Main Content Area */}
             <div className="flex-1 h-full">
               <div
                 ref={containerRef}
@@ -602,12 +576,12 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
                 <div className={`transition-opacity duration-300 ${
                   isTransitioning ? 'opacity-50' : 'opacity-100'
                 }`}>
-                  <MemoryGrid
+                  <AdaptiveMemoryGrid
                     memories={getCurrentMemories()}
                     loading={loading && getCurrentMemories().length === 0}
                     onViewMemory={handleViewMemory}
                     onDeleteMemory={handleDeleteMemory}
-                    currentUserId={user.id}
+                    currentUserId={user?.id}
                     emptyMessage={getEmptyMessage()}
                     viewMode={viewMode}
                     usernames={usernames}
@@ -629,7 +603,7 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
             setSelectedMemory(null);
           }}
           onDelete={handleDeleteMemory}
-          isOwner={user.id === selectedMemory.userId}
+          isOwner={user?.id === selectedMemory.userId}
           username={usernames[selectedMemory.userId]}
         />
       )}

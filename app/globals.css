@@ -41,37 +41,175 @@ body {
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  /* Responsive spacing utilities */
+  .px-responsive {
+    @apply px-4 sm:px-6 lg:px-8;
+  }
+  
+  .py-responsive {
+    @apply py-4 sm:py-6 lg:py-8;
+  }
+  
+  .gap-responsive {
+    @apply gap-4 sm:gap-6 lg:gap-8;
+  }
+
+  /* Touch-friendly tap targets */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Responsive text sizing */
+  .text-responsive-xs {
+    @apply text-xs sm:text-sm;
+  }
+  
+  .text-responsive-sm {
+    @apply text-sm sm:text-base;
+  }
+  
+  .text-responsive-base {
+    @apply text-base sm:text-lg;
+  }
+  
+  .text-responsive-lg {
+    @apply text-lg sm:text-xl lg:text-2xl;
+  }
+  
+  .text-responsive-xl {
+    @apply text-xl sm:text-2xl lg:text-3xl;
+  }
+  
+  .text-responsive-2xl {
+    @apply text-2xl sm:text-3xl lg:text-4xl;
+  }
 }
 
-/* Fashion-inspired masonry layout */
+/* Fashion-inspired masonry layout with improved responsiveness */
 @layer components {
   .masonry-grid {
     columns: 1;
-    column-gap: 1.5rem;
+    column-gap: 1rem;
   }
   
-  @media (min-width: 640px) {
+  @media (min-width: 480px) {
     .masonry-grid {
       columns: 2;
+      column-gap: 1.25rem;
+    }
+  }
+  
+  @media (min-width: 768px) {
+    .masonry-grid {
+      columns: 2;
+      column-gap: 1.5rem;
     }
   }
   
   @media (min-width: 1024px) {
     .masonry-grid {
       columns: 3;
+      column-gap: 1.5rem;
     }
   }
   
   @media (min-width: 1280px) {
     .masonry-grid {
       columns: 4;
+      column-gap: 1.5rem;
+    }
+  }
+  
+  @media (min-width: 1536px) {
+    .masonry-grid {
+      columns: 5;
+      column-gap: 1.5rem;
     }
   }
   
   .masonry-item {
     break-inside: avoid;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
     display: block;
+  }
+  
+  @media (min-width: 640px) {
+    .masonry-item {
+      margin-bottom: 1.25rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .masonry-item {
+      margin-bottom: 1.5rem;
+    }
+  }
+  
+  /* Enhanced responsive grid layouts with better breakpoints */
+  .responsive-grid {
+    display: grid;
+    gap: 0.75rem;
+    grid-template-columns: 1fr;
+  }
+  
+  @media (min-width: 480px) {
+    .responsive-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+  }
+  
+  @media (min-width: 768px) {
+    .responsive-grid {
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.25rem;
+    }
+  }
+  
+  @media (min-width: 1024px) {
+    .responsive-grid {
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1.5rem;
+    }
+  }
+  
+  @media (min-width: 1280px) {
+    .responsive-grid {
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1.5rem;
+    }
+  }
+  
+  @media (min-width: 1536px) {
+    .responsive-grid {
+      grid-template-columns: repeat(5, 1fr);
+      gap: 1.75rem;
+    }
+  }
+  
+  /* Enhanced touch targets for mobile */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+  
+  @media (max-width: 767px) {
+    .touch-target {
+      min-height: 48px;
+      min-width: 48px;
+    }
+  }
+  
+  /* Touch feedback animation */
+  .touch-feedback {
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .touch-feedback:active {
+    transform: scale(0.98);
+    transition: transform 0.1s ease;
   }
   
   /* Smooth transitions for fashion grid */
@@ -88,16 +226,36 @@ body {
     transform: translateY(-2px);
   }
   
-  /* Minimalistic typography */
+  /* Mobile-optimized hover states */
+  @media (hover: hover) {
+    .fashion-hover:hover {
+      transform: translateY(-2px);
+    }
+  }
+  
+  @media (hover: none) {
+    .fashion-hover:active {
+      transform: translateY(-1px);
+    }
+  }
+  
+  /* Minimalistic typography with responsive scaling */
   .fashion-text {
     font-feature-settings: "liga" 1, "kern" 1;
     text-rendering: optimizeLegibility;
   }
   
-  /* Subtle shadows for depth */
+  /* Subtle shadows for depth with responsive scaling */
   .fashion-shadow {
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 
-                0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05), 
+                0 1px 3px 0 rgba(0, 0, 0, 0.1);
+  }
+  
+  @media (min-width: 768px) {
+    .fashion-shadow {
+      box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 
+                  0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    }
   }
   
   .fashion-shadow-hover {
@@ -105,14 +263,63 @@ body {
                 0 2px 4px -1px rgba(0, 0, 0, 0.06);
   }
   
-  /* Swipe gesture indicators */
+  @media (min-width: 768px) {
+    .fashion-shadow-hover {
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 
+                  0 4px 6px -2px rgba(0, 0, 0, 0.05);
+    }
+  }
+  
+  /* Enhanced mobile-first modal with better responsiveness */
+  .mobile-modal {
+    @apply fixed inset-0 z-50;
+    @apply flex items-end sm:items-center justify-center;
+    @apply p-0 sm:p-4 lg:p-6;
+  }
+  
+  .mobile-modal-content {
+    @apply w-full max-w-lg;
+    @apply bg-white rounded-t-3xl sm:rounded-3xl;
+    @apply shadow-2xl;
+    @apply max-h-[95vh] sm:max-h-[90vh] lg:max-h-[85vh];
+    @apply overflow-y-auto;
+  }
+  
+  /* Better scroll behavior for modal content */
+  .mobile-modal-content {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  @media (max-width: 639px) {
+    .mobile-modal-content {
+      border-radius: 1.5rem 1.5rem 0 0;
+      max-height: 95vh;
+    }
+  }
+  
+  /* Responsive container */
+  .container-responsive {
+    @apply mx-auto px-4 sm:px-6 lg:px-8;
+    @apply max-w-7xl;
+  }
+  
+  /* Swipe gesture indicators with better mobile support */
   .swipe-indicator {
     opacity: 0;
     transition: opacity 0.3s ease;
   }
   
-  .swipe-indicator:hover {
-    opacity: 1;
+  @media (hover: hover) {
+    .swipe-indicator:hover {
+      opacity: 1;
+    }
+  }
+  
+  @media (hover: none) {
+    .swipe-indicator {
+      opacity: 0.7;
+    }
   }
   
   /* Loading skeleton animation */
@@ -128,4 +335,84 @@ body {
   .fashion-pulse {
     animation: fashion-pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
   }
+  
+  /* Enhanced touch feedback */
+  .touch-feedback {
+    transition: transform 0.1s ease, background-color 0.1s ease;
+  }
+  
+  .touch-feedback:active {
+    transform: scale(0.98);
+  }
+  
+  /* Safe area handling for notched devices */
+  .safe-area-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  
+  .safe-area-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  
+  .safe-area-left {
+    padding-left: env(safe-area-inset-left);
+  }
+  
+  .safe-area-right {
+    padding-right: env(safe-area-inset-right);
+  }
 }
+
+/* Elegant minimalist animations and effects */
+.elegant-glow {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.05),
+              0 2px 4px rgba(0, 0, 0, 0.05),
+              0 0 20px rgba(0, 0, 0, 0.02);
+}
+
+.elegant-glow-hover {
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.08),
+              0 4px 8px rgba(0, 0, 0, 0.08),
+              0 0 30px rgba(0, 0, 0, 0.04);
+}
+
+/* Refined card hover animations */
+.memory-card-hover {
+  transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.memory-card-hover:hover {
+  transform: translateY(-2px) scale(1.01);
+}
+
+/* Elegant backdrop blur enhancement */
+.elegant-backdrop {
+  backdrop-filter: blur(12px) saturate(180%);
+  background: rgba(255, 255, 255, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Sophisticated icon animation */
+.icon-hover {
+  transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.icon-hover:hover {
+  transform: scale(1.1) rotate(2deg);
+}
+
+/* Minimalist button animation */
+.btn-elegant {
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: translateZ(0);
+}
+
+.btn-elegant:hover {
+  transform: translateY(-1px) scale(1.02);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+  .btn-elegant:active {
+    transform: translateY(0) scale(0.98);
+  }
+

@@ -92,6 +92,55 @@ class MemoryApiClient {
     return this.request<{ stats: MemoryStats }>(`?path=/api/memory/stats&${params.toString()}`);
   }
 
+  // Simplified stats method (wrapper for getMemoryStats)
+  async getStats(userId?: string, guildId?: string): Promise<ApiResponse<MemoryStats>> {
+    const result = await this.getMemoryStats(userId, guildId);
+    if (result.success && result.data) {
+      return {
+        success: true,
+        data: result.data.stats
+      };
+    }
+    return {
+      success: false,
+      error: result.error,
+      code: result.code
+    };
+  }
+
+  // Get usernames for a list of user IDs
+  async getUsernames(userIds: string[]): Promise<ApiResponse<Record<string, string>>> {
+    try {
+      const response = await fetch('/api/auth/discord/users', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ userIds }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        return {
+          success: false,
+          error: errorData.error || `HTTP ${response.status}`,
+        };
+      }
+
+      const data = await response.json();
+      return {
+        success: true,
+        data,
+      };
+    } catch (error) {
+      console.error('Discord users API request failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Network error',
+      };
+    }
+  }
+
   // Delete a memory
   async deleteMemory(memoryId: string, userId: string): Promise<ApiResponse<{ message: string }>> {
     return this.request<{ message: string }>(`?path=/api/memory/${memoryId}`, {

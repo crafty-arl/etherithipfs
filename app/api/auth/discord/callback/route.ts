@@ -34,42 +34,20 @@ export async function GET(req: NextRequest) {
     if (error) {
       const fullError = errorDescription ? `${error}: ${errorDescription}` : error;
       console.error('Discord OAuth error:', fullError);
-      return new Response(`
-        <html>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'DISCORD_AUTH_ERROR',
-                error: '${fullError.replace(/'/g, "\\'")}',
-                details: 'OAuth authorization was denied or failed'
-              }, window.location.origin);
-              window.close();
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      });
+      
+      // Redirect back to home with error parameter
+      const redirectUrl = new URL('/', req.url);
+      redirectUrl.searchParams.set('auth_error', encodeURIComponent(fullError));
+      return NextResponse.redirect(redirectUrl);
     }
 
     if (!code || !state) {
       console.error('Missing OAuth parameters:', { code: !!code, state: !!state });
-      return new Response(`
-        <html>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'DISCORD_AUTH_ERROR',
-                error: 'Missing authorization code or state parameter from Discord',
-                details: 'OAuth flow was incomplete'
-              }, window.location.origin);
-              window.close();
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      });
+      
+      // Redirect back to home with error parameter
+      const redirectUrl = new URL('/', req.url);
+      redirectUrl.searchParams.set('auth_error', encodeURIComponent('Missing authorization parameters from Discord'));
+      return NextResponse.redirect(redirectUrl);
     }
 
     // Check environment variables
@@ -85,42 +63,22 @@ export async function GET(req: NextRequest) {
         hasRedirectUri: !!redirectUri,
         hasNextAuthSecret: !!nextAuthSecret
       });
-      return new Response(`
-        <html>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'DISCORD_AUTH_ERROR',
-                error: 'Server configuration error - missing Discord credentials',
-                details: 'Please check environment variables'
-              }, window.location.origin);
-              window.close();
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      });
+      
+      // Redirect back to home with error parameter
+      const redirectUrl = new URL('/', req.url);
+      redirectUrl.searchParams.set('auth_error', encodeURIComponent('Server configuration error - missing Discord credentials'));
+      return NextResponse.redirect(redirectUrl);
     }
 
     // Verify state parameter
     const storedState = req.cookies.get('discord_oauth_state')?.value;
     if (state !== storedState) {
-      return new Response(`
-        <html>
-          <body>
-            <script>
-              window.opener.postMessage({
-                type: 'DISCORD_AUTH_ERROR',
-                error: 'Invalid state parameter'
-              }, window.location.origin);
-              window.close();
-            </script>
-          </body>
-        </html>
-      `, {
-        headers: { 'Content-Type': 'text/html' }
-      });
+      console.error('State verification failed:', { received: state, stored: storedState });
+      
+      // Redirect back to home with error parameter
+      const redirectUrl = new URL('/', req.url);
+      redirectUrl.searchParams.set('auth_error', encodeURIComponent('Invalid state parameter - possible CSRF attempt'));
+      return NextResponse.redirect(redirectUrl);
     }
 
     // Exchange code for access token
@@ -205,33 +163,25 @@ export async function GET(req: NextRequest) {
     );
 
     // Set session cookie and redirect
-    const response = new Response(`
-      <html>
-        <body>
-          <script>
-            window.opener.postMessage({
-              type: 'DISCORD_AUTH_SUCCESS',
-              user: {
-                id: '${userData.id}',
-                username: '${userData.username}',
-                discriminator: '${userData.discriminator}',
-                avatar: '${userData.avatar}',
-                email: '${userData.email || ''}'
-              }
-            }, window.location.origin);
-            window.close();
-          </script>
-        </body>
-      </html>
-    `, {
-      headers: { 'Content-Type': 'text/html' }
-    });
+    const response = NextResponse.redirect(new URL('/', req.url));
 
     // Set session cookie
-    response.headers.append('Set-Cookie', `discord_session=${sessionToken}; HttpOnly; Secure=${process.env.NODE_ENV === 'production'}; SameSite=Lax; Path=/; Max-Age=${7 * 24 * 60 * 60}`);
+    response.cookies.set('discord_session', sessionToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 7 * 24 * 60 * 60 // 7 days
+    });
     
     // Clear state cookie
-    response.headers.append('Set-Cookie', `discord_oauth_state=; HttpOnly; Secure=${process.env.NODE_ENV === 'production'}; SameSite=Lax; Path=/; Max-Age=0`);
+    response.cookies.set('discord_oauth_state', '', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      path: '/',
+      maxAge: 0
+    });
 
     return response;
 
@@ -239,23 +189,10 @@ export async function GET(req: NextRequest) {
     console.error('Discord OAuth callback error:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown authentication error';
-    const sanitizedError = errorMessage.replace(/'/g, "\\'");
     
-    return new Response(`
-      <html>
-        <body>
-          <script>
-            window.opener.postMessage({
-              type: 'DISCORD_AUTH_ERROR',
-              error: '${sanitizedError}',
-              details: 'Check server logs for more details'
-            }, window.location.origin);
-            window.close();
-          </script>
-        </body>
-      </html>
-    `, {
-      headers: { 'Content-Type': 'text/html' }
-    });
+    // Redirect back to home with error parameter
+    const redirectUrl = new URL('/', req.url);
+    redirectUrl.searchParams.set('auth_error', encodeURIComponent(errorMessage));
+    return NextResponse.redirect(redirectUrl);
   }
 } 
