@@ -30,13 +30,16 @@ export async function GET(req: NextRequest) {
 
     console.log('OAuth params:', { code: !!code, state, error, errorDescription });
 
+    // Get the base URL for redirects
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://etherith.craftthefuture.xyz';
+
     // Check for OAuth errors
     if (error) {
       const fullError = errorDescription ? `${error}: ${errorDescription}` : error;
       console.error('Discord OAuth error:', fullError);
       
       // Redirect back to home with error parameter
-      const redirectUrl = new URL('/', req.url);
+      const redirectUrl = new URL('/', baseUrl);
       redirectUrl.searchParams.set('auth_error', encodeURIComponent(fullError));
       return NextResponse.redirect(redirectUrl);
     }
@@ -45,7 +48,7 @@ export async function GET(req: NextRequest) {
       console.error('Missing OAuth parameters:', { code: !!code, state: !!state });
       
       // Redirect back to home with error parameter
-      const redirectUrl = new URL('/', req.url);
+      const redirectUrl = new URL('/', baseUrl);
       redirectUrl.searchParams.set('auth_error', encodeURIComponent('Missing authorization parameters from Discord'));
       return NextResponse.redirect(redirectUrl);
     }
@@ -65,7 +68,7 @@ export async function GET(req: NextRequest) {
       });
       
       // Redirect back to home with error parameter
-      const redirectUrl = new URL('/', req.url);
+      const redirectUrl = new URL('/', baseUrl);
       redirectUrl.searchParams.set('auth_error', encodeURIComponent('Server configuration error - missing Discord credentials'));
       return NextResponse.redirect(redirectUrl);
     }
@@ -76,7 +79,7 @@ export async function GET(req: NextRequest) {
       console.error('State verification failed:', { received: state, stored: storedState });
       
       // Redirect back to home with error parameter
-      const redirectUrl = new URL('/', req.url);
+      const redirectUrl = new URL('/', baseUrl);
       redirectUrl.searchParams.set('auth_error', encodeURIComponent('Invalid state parameter - possible CSRF attempt'));
       return NextResponse.redirect(redirectUrl);
     }
@@ -162,8 +165,9 @@ export async function GET(req: NextRequest) {
       { expiresIn: '7d' }
     );
 
-    // Set session cookie and redirect
-    const response = NextResponse.redirect(new URL('/', req.url));
+    // Set session cookie and redirect to production home page
+    console.log('Redirecting to production domain:', baseUrl);
+    const response = NextResponse.redirect(new URL('/', baseUrl));
 
     // Set session cookie
     response.cookies.set('discord_session', sessionToken, {
@@ -189,9 +193,10 @@ export async function GET(req: NextRequest) {
     console.error('Discord OAuth callback error:', error);
     
     const errorMessage = error instanceof Error ? error.message : 'Unknown authentication error';
+    const baseUrl = process.env.NEXTAUTH_URL || 'https://etherith.craftthefuture.xyz';
     
     // Redirect back to home with error parameter
-    const redirectUrl = new URL('/', req.url);
+    const redirectUrl = new URL('/', baseUrl);
     redirectUrl.searchParams.set('auth_error', encodeURIComponent(errorMessage));
     return NextResponse.redirect(redirectUrl);
   }
