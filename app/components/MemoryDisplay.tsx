@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Memory, MemoryFilters, MemoryStats } from '../types/memory';
-import { memoryApi } from '../utils/memoryApi';
+import { memoryApi, getCategoryDisplayName } from '../utils/memoryApi';
 import AdaptiveMemoryGrid from './AdaptiveMemoryGrid';
 import MemoryDetailModal from './MemoryDetailModal';
 import AnimatedDialMenu from './AnimatedDialMenu';
@@ -17,6 +17,19 @@ interface MemoryDisplayProps {
 }
 
 type ViewMode = 'our' | 'my';
+
+// Valid categories that should be displayed
+const VALID_CATEGORIES = [
+  'documents',
+  'stories', 
+  'audio_video',
+  'images_visuals',
+  'research_articles',
+  'guides_howtos',
+  'history_timelines',
+  'cultural_knowledge',
+  'quotes_notes'
+];
 
 export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
   const [viewMode, setViewMode] = useState<ViewMode>('our');
@@ -62,7 +75,8 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
   const extractTags = (memories: Memory[]) => {
     const tagSet = new Set<string>();
     memories.forEach(memory => {
-      if (memory.tags && Array.isArray(memory.tags)) {
+      // Only extract tags from memories with valid categories
+      if (VALID_CATEGORIES.includes(memory.category) && memory.tags && Array.isArray(memory.tags)) {
         memory.tags.forEach(tag => {
           if (tag && typeof tag === 'string') {
             tagSet.add(tag.toLowerCase().trim());
@@ -78,7 +92,11 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
     const categorySet = new Set<string>();
     memories.forEach(memory => {
       if (memory.category && typeof memory.category === 'string') {
-        categorySet.add(memory.category.toLowerCase().trim());
+        const category = memory.category.toLowerCase().trim();
+        // Only add valid categories
+        if (VALID_CATEGORIES.includes(category)) {
+          categorySet.add(category);
+        }
       }
     });
     return Array.from(categorySet).sort();
@@ -355,6 +373,11 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
     const currentMemories = viewMode === 'my' ? myMemories : ourMemories;
     
     return currentMemories.filter(memory => {
+      // Only show memories with valid categories
+      if (!VALID_CATEGORIES.includes(memory.category)) {
+        return false;
+      }
+      
       // Category filter
       if (selectedCategory && memory.category !== selectedCategory) {
         return false;
@@ -535,7 +558,7 @@ export default function MemoryDisplay({ user, guildId }: MemoryDisplayProps) {
                     >
                       <option value="">All Categories</option>
                       {allCategories.map(category => (
-                        <option key={category} value={category}>{category}</option>
+                        <option key={category} value={category}>{getCategoryDisplayName(category)}</option>
                       ))}
                     </select>
                   </div>

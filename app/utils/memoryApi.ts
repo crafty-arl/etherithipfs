@@ -170,16 +170,15 @@ export function formatFileSize(bytes: number): string {
 // Helper function to get category display name
 export function getCategoryDisplayName(category: string): string {
   const categoryMap: Record<string, string> = {
-    'gaming': '🎮 Gaming',
-    'creative': '🎨 Creative',
-    'learning': '📚 Learning',
-    'work': '💼 Work',
-    'social': '🎉 Social',
-    'notes': '📝 Notes',
-    'projects': '🔧 Projects',
-    'achievements': '🏆 Achievements',
-    'personal': '❤️ Personal',
-    'other': '📊 Other',
+    'documents': '📄 Documents',
+    'stories': '📖 Stories',
+    'audio_video': '🎵 Audio & Video',
+    'images_visuals': '🖼️ Images & Visuals',
+    'research_articles': '📊 Research & Articles',
+    'guides_howtos': '📋 Guides & How-Tos',
+    'history_timelines': '🕰️ History & Timelines',
+    'cultural_knowledge': '🏛️ Cultural Knowledge',
+    'quotes_notes': '💭 Quotes & Notes',
   };
   return categoryMap[category] || category;
 }

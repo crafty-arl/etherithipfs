@@ -79,16 +79,15 @@ export default function MemoryCard({ memory, onView, onDelete, isOwner = false, 
 
   const getCategoryColor = (category: string) => {
     const colorMap: Record<string, string> = {
-      'gaming': 'bg-stone-50 text-stone-600 border-stone-100',
-      'creative': 'bg-stone-50 text-stone-600 border-stone-100',
-      'learning': 'bg-stone-50 text-stone-600 border-stone-100',
-      'work': 'bg-stone-50 text-stone-600 border-stone-100',
-      'social': 'bg-stone-50 text-stone-600 border-stone-100',
-      'notes': 'bg-stone-50 text-stone-600 border-stone-100',
-      'projects': 'bg-stone-50 text-stone-600 border-stone-100',
-      'achievements': 'bg-stone-50 text-stone-600 border-stone-100',
-      'personal': 'bg-stone-50 text-stone-600 border-stone-100',
-      'other': 'bg-stone-50 text-stone-600 border-stone-100',
+      'documents': 'bg-stone-50 text-stone-600 border-stone-100',
+      'stories': 'bg-stone-50 text-stone-600 border-stone-100',
+      'audio_video': 'bg-stone-50 text-stone-600 border-stone-100',
+      'images_visuals': 'bg-stone-50 text-stone-600 border-stone-100',
+      'research_articles': 'bg-stone-50 text-stone-600 border-stone-100',
+      'guides_howtos': 'bg-stone-50 text-stone-600 border-stone-100',
+      'history_timelines': 'bg-stone-50 text-stone-600 border-stone-100',
+      'cultural_knowledge': 'bg-stone-50 text-stone-600 border-stone-100',
+      'quotes_notes': 'bg-stone-50 text-stone-600 border-stone-100',
     };
     return colorMap[category] || 'bg-stone-50 text-stone-600 border-stone-100';
   };
